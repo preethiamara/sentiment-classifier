@@ -1,21 +1,4 @@
-# =============================================================
-# Project 2: Sentiment Classifier — Fine-tuning DistilBERT
-# Preethi Amara — Tesla ML Intern Prep
-# Dataset: IMDB movie reviews (50,000 reviews, pos/neg labels)
-# =============================================================
-# What this teaches:
-#   - How to use a pretrained transformer (DistilBERT)
-#   - Tokenization: converting text → numbers a model understands
-#   - Fine-tuning: adapting a large model to your specific task
-#   - HuggingFace: the most used ML library in industry
-#
-# The core skill: "take a giant pretrained model, adapt it to
-# a new task in hours instead of months" — exactly what Tesla
-# does with their foundation models.
-# =============================================================
 
-# --- STEP 0: Install dependencies (run once) -----------------
-# pip3 install torch transformers datasets matplotlib
 
 import torch
 import torch.nn as nn
@@ -30,9 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from torch.optim import AdamW
 
-# =============================================================
-# STEP 1: Config
-# =============================================================
+
 MAX_LENGTH    = 256    # max tokens per review (truncate longer ones)
 BATCH_SIZE    = 16     # smaller batch since transformers use more memory
 EPOCHS        = 3      # transformers fine-tune fast — 3 epochs is enough
@@ -48,16 +29,11 @@ else:
 print(f"Using device: {DEVICE}")
 
 
-# =============================================================
-# STEP 2: Load the IMDB dataset
-# 25,000 training reviews + 25,000 test reviews
-# Each review is labeled: 0 = negative, 1 = positive
-# =============================================================
+
 print("\nLoading IMDB dataset...")
 dataset = load_dataset("stanfordnlp/imdb")
 
-# Use a subset to keep training fast on your laptop
-# (still 10K examples — more than enough to learn from)
+# Use a subset 
 train_data = dataset["train"].shuffle(seed=42).select(range(10000))
 test_data  = dataset["test"].shuffle(seed=42).select(range(2000))
 
@@ -67,20 +43,6 @@ print(f"\nExample review:\n{train_data[0]['text'][:300]}...")
 print(f"Label: {'POSITIVE' if train_data[0]['label'] == 1 else 'NEGATIVE'}")
 
 
-# =============================================================
-# STEP 3: Tokenization
-#
-# Models don't understand raw text — they need numbers.
-# A tokenizer splits text into "tokens" (words/subwords)
-# and maps each to a number ID.
-#
-# Example:
-#   "I loved this film" →
-#   tokens:   ["i", "loved", "this", "film"]
-#   input_ids: [1045, 3100, 2023, 2143]
-#
-# DistilBertTokenizerFast handles this automatically.
-# =============================================================
 print("\nLoading tokenizer...")
 tokenizer = DistilBertTokenizerFast.from_pretrained("distilbert-base-uncased")
 
@@ -106,18 +68,7 @@ test_loader  = DataLoader(test_data,  batch_size=BATCH_SIZE, shuffle=False)
 print(f"Tokenization complete.")
 
 
-# =============================================================
-# STEP 4: Load pretrained DistilBERT
-#
-# DistilBERT is a smaller, faster version of BERT.
-# It was trained on Wikipedia + BookCorpus (billions of words).
-# It already understands language deeply.
-#
-# DistilBertForSequenceClassification adds a small classifier
-# layer on top of DistilBERT for our pos/neg task.
-#
-# num_labels=2 means: 2 output classes (positive, negative)
-# =============================================================
+
 print("\nLoading pretrained DistilBERT...")
 model = DistilBertForSequenceClassification.from_pretrained(
     "distilbert-base-uncased",
@@ -151,9 +102,7 @@ scheduler = get_scheduler(
 )
 
 
-# =============================================================
-# STEP 6: Training loop
-# =============================================================
+
 def train_epoch(model, loader, optimizer, scheduler):
     model.train()
     total_loss, correct, total = 0, 0, 0
@@ -165,9 +114,7 @@ def train_epoch(model, loader, optimizer, scheduler):
 
         optimizer.zero_grad()
 
-        # HuggingFace models return an object, not just logits
-        # outputs.loss = cross entropy loss (computed internally)
-        # outputs.logits = raw scores for each class
+       
         outputs = model(
             input_ids=input_ids,
             attention_mask=attention_mask,
@@ -177,8 +124,8 @@ def train_epoch(model, loader, optimizer, scheduler):
         loss = outputs.loss
         loss.backward()
 
-        # Gradient clipping: prevents exploding gradients
-        # (important for transformer fine-tuning)
+        # Gradient clipping
+
         torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
 
         optimizer.step()
@@ -219,9 +166,7 @@ def evaluate(model, loader):
     return total_loss / len(loader), 100.0 * correct / total
 
 
-# =============================================================
-# STEP 7: Run training
-# =============================================================
+
 train_losses, test_losses = [], []
 train_accs,   test_accs   = [], []
 best_acc = 0.0
@@ -249,9 +194,7 @@ for epoch in range(1, EPOCHS + 1):
 print(f"--- Training complete | Best test accuracy: {best_acc:.2f}% ---")
 
 
-# =============================================================
-# STEP 8: Plot training curves
-# =============================================================
+
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
 
 ax1.plot(train_losses, label='Train loss', marker='o')
@@ -270,10 +213,7 @@ plt.savefig("sentiment_training_curves.png", dpi=150)
 print("Saved sentiment_training_curves.png")
 
 
-# =============================================================
-# STEP 9: Try it on your own sentences
-# This is the fun part — see your model in action!
-# =============================================================
+
 def predict(texts):
     """Run the model on a list of sentences and print results."""
     model.eval()
